@@ -11,6 +11,7 @@ app.use(cors({
   origin: 'https://frontend-f-lckm.onrender.com',
   credentials: true
 }));
+app.options('*', cors());
 
 // Config
 const API_KEY = process.env.MONGODB_DATA_API_KEY;
