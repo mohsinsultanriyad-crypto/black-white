@@ -38,14 +38,22 @@ app.get('/api/data', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch all data', details: err.message });
   }
 });
+// Imports
 const express = require('express');
 const fetch = require('node-fetch');
 
+// Config
 const API_KEY = process.env.MONGODB_DATA_API_KEY;
 const BASE_URL = 'https://data.mongodb-api.com/app/data-backend/endpoint/data/v1';
 
+// App initialization
 const app = express();
 app.use(express.json());
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 // GET /api/data - aggregate all collections for frontend polling
 app.get('/api/data', async (req, res) => {
@@ -88,6 +96,7 @@ app.get('/api/data', async (req, res) => {
   }
 });
 
+// POST /mongo/:action/:collection - generic proxy for Data API
 app.post('/mongo/:action/:collection', async (req, res) => {
   const { action, collection } = req.params;
   const body = req.body;
@@ -112,5 +121,6 @@ app.post('/mongo/:action/:collection', async (req, res) => {
   }
 });
 
+// Start server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`API running on ${PORT}`));
