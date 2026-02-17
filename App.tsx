@@ -21,35 +21,50 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [language, setLanguage] = useState<Language>('en');
 
-  // Load from MongoDB on Init
+  // Load from backend on Init and set up polling for auto-refresh
   useEffect(() => {
-    const initData = async () => {
+    let isMounted = true;
+    let pollingInterval: NodeJS.Timeout | null = null;
+    let isFetching = false;
+
+    const fetchData = async () => {
+      if (isFetching) return;
+      isFetching = true;
       try {
-        const [dbShifts, dbLeaves, dbPosts, dbWorkers, dbAdvances, dbAnnounce] = await Promise.all([
-          db.getAll<Shift>('shifts'),
-          db.getAll<Leave>('leaves'),
-          db.getAll<SitePost>('posts'),
-          db.getAll<User>('workers'),
-          db.getAll<AdvanceRequest>('advanceRequests'),
-          db.getAll<Announcement>('announcements'),
-        ]);
-
-        if (dbShifts.length) setShifts(dbShifts);
-        if (dbLeaves.length) setLeaves(dbLeaves);
-        if (dbPosts.length) setPosts(dbPosts);
-        if (dbWorkers.length) setWorkers(dbWorkers);
-        if (dbAdvances.length) setAdvanceRequests(dbAdvances);
-        if (dbAnnounce.length) setAnnouncements(dbAnnounce);
-
-        // Removed localStorage usage for language. Language will be kept in state only.
+        // Replace with your backend API endpoint if needed
+        const res = await fetch('/api/data');
+        if (!res.ok) throw new Error('Failed to fetch data');
+        const data = await res.json();
+        if (!isMounted) return;
+        // Only update state if data differs (shallow compare)
+        if (JSON.stringify(data.shifts) !== JSON.stringify(shifts)) setShifts(data.shifts || []);
+        if (JSON.stringify(data.leaves) !== JSON.stringify(leaves)) setLeaves(data.leaves || []);
+        if (JSON.stringify(data.posts) !== JSON.stringify(posts)) setPosts(data.posts || []);
+        if (JSON.stringify(data.workers) !== JSON.stringify(workers)) setWorkers(data.workers || []);
+        if (JSON.stringify(data.advanceRequests) !== JSON.stringify(advanceRequests)) setAdvanceRequests(data.advanceRequests || []);
+        if (JSON.stringify(data.announcements) !== JSON.stringify(announcements)) setAnnouncements(data.announcements || []);
       } catch (e) {
-        console.error("Initial cloud fetch failed, using defaults", e);
+        console.error("Auto-refresh fetch failed", e);
       } finally {
-        setIsLoaded(true);
+        isFetching = false;
+        if (!isLoaded) setIsLoaded(true);
       }
     };
-    initData();
-  }, []);
+
+    // Initial load
+    fetchData();
+
+    if (currentUser) {
+      const intervalMs = currentUser.role === 'admin' ? 3000 : 5000;
+      pollingInterval = setInterval(fetchData, intervalMs);
+    }
+
+    return () => {
+      isMounted = false;
+      if (pollingInterval) clearInterval(pollingInterval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   // Sync state changes to MongoDB
   // We use custom setters to trigger cloud sync only when data actually changes
