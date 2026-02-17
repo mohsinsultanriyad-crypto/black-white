@@ -1,5 +1,4 @@
-// Helper to strip Mongo meta fields
-const stripMongoMeta = (arr = []) => arr.map(({ _id, __v, ...rest }) => rest);
+
 
 // Simulated sync/restore endpoints (replace with real DB logic if needed)
 app.post('/api/sync', async (req, res) => {
