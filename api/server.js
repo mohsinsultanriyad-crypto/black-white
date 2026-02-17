@@ -2,16 +2,23 @@
 // Imports
 const express = require('express');
 const fetch = require('node-fetch');
-const cors = require('cors');
+// const cors = require('cors');
 
 // App initialization (MUST be before any routes)
 const app = express();
 app.use(express.json());
-app.use(cors({
-  origin: 'https://frontend-f-lckm.onrender.com',
-  credentials: true
-}));
-app.options('*', cors());
+
+// Manual CORS middleware for full preflight support
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://frontend-f-lckm.onrender.com');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 // Production-grade error logging
 process.on('unhandledRejection', (reason, promise) => {
