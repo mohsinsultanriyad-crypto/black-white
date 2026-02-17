@@ -1,3 +1,60 @@
+// Helper to strip Mongo meta fields
+const stripMongoMeta = (arr = []) => arr.map(({ _id, __v, ...rest }) => rest);
+
+// Simulated sync/restore endpoints (replace with real DB logic if needed)
+app.post('/api/sync', async (req, res) => {
+  try {
+    const { workers = [], shifts = [], leaves = [], advances = [], posts = [], announcements = [] } = req.body;
+    console.log("SYNC counts", { workers: workers.length, shifts: shifts.length, leaves: leaves.length, advances: advances.length, posts: posts.length, announcements: announcements.length });
+    // Strip meta fields
+    const cleanWorkers = stripMongoMeta(workers);
+    const cleanShifts = stripMongoMeta(shifts);
+    const cleanLeaves = stripMongoMeta(leaves);
+    const cleanAdvances = stripMongoMeta(advances);
+    const cleanPosts = stripMongoMeta(posts);
+    const cleanAnnouncements = stripMongoMeta(announcements);
+    // Simulate insertMany with ordered:false
+    // Replace with real DB logic as needed
+    // await WorkerModel.insertMany(cleanWorkers, { ordered: false });
+    // ... repeat for other collections
+    res.json({ status: 'ok', inserted: true });
+  } catch (err) {
+    res.status(500).json({
+      error: 'Sync failed',
+      message: err.message,
+      name: err.name,
+      code: err.code,
+      stack: err.stack,
+    });
+  }
+});
+
+app.post('/api/restore', async (req, res) => {
+  try {
+    const { workers = [], shifts = [], leaves = [], advances = [], posts = [], announcements = [] } = req.body;
+    console.log("RESTORE counts", { workers: workers.length, shifts: shifts.length, leaves: leaves.length, advances: advances.length, posts: posts.length, announcements: announcements.length });
+    // Strip meta fields
+    const cleanWorkers = stripMongoMeta(workers);
+    const cleanShifts = stripMongoMeta(shifts);
+    const cleanLeaves = stripMongoMeta(leaves);
+    const cleanAdvances = stripMongoMeta(advances);
+    const cleanPosts = stripMongoMeta(posts);
+    const cleanAnnouncements = stripMongoMeta(announcements);
+    // Simulate insertMany with ordered:false
+    // Replace with real DB logic as needed
+    // await WorkerModel.insertMany(cleanWorkers, { ordered: false });
+    // ... repeat for other collections
+    res.json({ status: 'ok', inserted: true });
+  } catch (err) {
+    res.status(500).json({
+      error: 'Restore failed',
+      message: err.message,
+      name: err.name,
+      code: err.code,
+      stack: err.stack,
+    });
+  }
+});
 // GET /api/data - aggregate all collections for frontend polling
 app.get('/api/data', async (req, res) => {
   try {
