@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Shift, Leave, SitePost, AdvanceRequest, Announcement } from './types';
-import { MOCK_WORKERS, MOCK_ADMIN } from './constants';
+// import { MOCK_WORKERS, MOCK_ADMIN } from './constants';
 import WorkerApp from './components/WorkerApp';
 import AdminApp from './components/AdminApp';
 import Login from './components/Login';
@@ -18,30 +18,31 @@ const App: React.FC = () => {
   const [advanceRequests, setAdvanceRequests] = useState<AdvanceRequest[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-    // Initial data load from backend
-    useEffect(() => {
-      async function fetchAllData() {
-        try {
-          const [shiftsRes, leavesRes, postsRes, workersRes, advanceRes, announceRes] = await Promise.all([
-            apiClient.get('/api/shifts'),
-            apiClient.get('/api/leaves'),
-            apiClient.get('/api/posts'),
-            apiClient.get('/api/workers'),
-            apiClient.get('/api/advanceRequests'),
-            apiClient.get('/api/announcements'),
-          ]);
-          setShifts(shiftsRes.data || []);
-          setLeaves(leavesRes.data || []);
-          setPosts(postsRes.data || []);
-          setWorkers(workersRes.data || []);
-          setAdvanceRequests(advanceRes.data || []);
-          setAnnouncements(announceRes.data || []);
-        } catch (err) {
-          // Optionally handle error
-        } finally {
-          setIsLoaded(true);
-        }
+    // Fetch all data from backend
+    const fetchAllData = async () => {
+      try {
+        const [shiftsRes, leavesRes, postsRes, workersRes, advanceRes, announceRes] = await Promise.all([
+          apiClient.get('/api/shifts'),
+          apiClient.get('/api/leaves'),
+          apiClient.get('/api/posts'),
+          apiClient.get('/api/workers'),
+          apiClient.get('/api/advanceRequests'),
+          apiClient.get('/api/announcements'),
+        ]);
+        setShifts(shiftsRes.data || []);
+        setLeaves(leavesRes.data || []);
+        setPosts(postsRes.data || []);
+        setWorkers(workersRes.data || []);
+        setAdvanceRequests(advanceRes.data || []);
+        setAnnouncements(announceRes.data || []);
+      } catch (err) {
+        // Optionally handle error
+      } finally {
+        setIsLoaded(true);
       }
+    };
+
+    useEffect(() => {
       fetchAllData();
     }, []);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -51,14 +52,13 @@ const App: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
-    console.log("rehydrated token:", token ? "yes" : "no");
     if (token && role && !currentUser) {
-      // Simulate user rehydration (replace with real user fetch if needed)
-      if (role === 'admin') setCurrentUser(MOCK_ADMIN);
-      else {
-        const worker = MOCK_WORKERS.find(w => token === 'worker-token-' + w.workerId);
-        if (worker) setCurrentUser(worker);
-      }
+      // Fetch user from backend
+      apiClient.get('/api/auth/me').then(res => {
+        setCurrentUser(res.data);
+      }).catch(() => {
+        setCurrentUser(null);
+      });
     }
   }, []);
 
@@ -72,6 +72,7 @@ const App: React.FC = () => {
       const next = typeof val === 'function' ? val(prev) : val;
       setIsSyncing(true);
       apiClient.post('/api/shifts/batch', next)
+        .then(fetchAllData)
         .catch(() => {/* handle error if needed */})
         .finally(() => setIsSyncing(false));
       return next;
@@ -84,6 +85,7 @@ const App: React.FC = () => {
       const next = typeof val === 'function' ? val(prev) : val;
       setIsSyncing(true);
       apiClient.post('/api/leaves/batch', next)
+        .then(fetchAllData)
         .catch(() => {/* handle error if needed */})
         .finally(() => setIsSyncing(false));
       return next;
@@ -96,6 +98,7 @@ const App: React.FC = () => {
       const next = typeof val === 'function' ? val(prev) : val;
       setIsSyncing(true);
       apiClient.post('/api/workers/batch', next)
+        .then(fetchAllData)
         .catch(() => {/* handle error if needed */})
         .finally(() => setIsSyncing(false));
       return next;
@@ -108,6 +111,7 @@ const App: React.FC = () => {
       const next = typeof val === 'function' ? val(prev) : val;
       setIsSyncing(true);
       apiClient.post('/api/posts/batch', next)
+        .then(fetchAllData)
         .catch(() => {/* handle error if needed */})
         .finally(() => setIsSyncing(false));
       return next;
@@ -120,6 +124,7 @@ const App: React.FC = () => {
       const next = typeof val === 'function' ? val(prev) : val;
       setIsSyncing(true);
       apiClient.post('/api/advanceRequests/batch', next)
+        .then(fetchAllData)
         .catch(() => {/* handle error if needed */})
         .finally(() => setIsSyncing(false));
       return next;
@@ -132,6 +137,7 @@ const App: React.FC = () => {
       const next = typeof val === 'function' ? val(prev) : val;
       setIsSyncing(true);
       apiClient.post('/api/announcements/batch', next)
+        .then(fetchAllData)
         .catch(() => {/* handle error if needed */})
         .finally(() => setIsSyncing(false));
       return next;

@@ -7,7 +7,10 @@ const cors = require('cors');
 // App initialization (MUST be before any routes)
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: 'https://frontend-f-lckm.onrender.com',
+  credentials: true
+}));
 
 // Config
 const API_KEY = process.env.MONGODB_DATA_API_KEY;

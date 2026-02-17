@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { User } from '../types';
-import { MOCK_ADMIN, APP_NAME } from '../constants';
+import { APP_NAME } from '../constants';
+import apiClient from '../apiClient';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -14,31 +15,21 @@ const Login: React.FC<LoginProps> = ({ onLogin, workers }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    let token = '';
-    let role = '';
-    if (isAdmin) {
-      if (userId === MOCK_ADMIN.email && password === (MOCK_ADMIN.password || 'password123')) {
-        token = 'admin-token';
-        role = 'admin';
-        localStorage.setItem('token', token);
-        localStorage.setItem('role', role);
-        onLogin(MOCK_ADMIN);
-      } else {
-        setError('Invalid Admin credentials');
-      }
-    } else {
-      const worker = workers.find(w => w.workerId === userId);
-      if (worker && password === (worker.password || 'password123')) {
-        token = 'worker-token-' + worker.workerId;
-        role = 'worker';
-        localStorage.setItem('token', token);
-        localStorage.setItem('role', role);
-        onLogin(worker);
-      } else {
-        setError('Invalid Worker ID or Password');
-      }
+    setError('');
+    try {
+      const res = await apiClient.post('/api/auth/login', {
+        userId,
+        password,
+        role: isAdmin ? 'admin' : 'worker',
+      });
+      const { token, user } = res.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('role', user.role);
+      onLogin(user);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Login failed');
     }
   };
 
