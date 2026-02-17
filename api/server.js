@@ -1,9 +1,10 @@
+
 // Imports
 const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
 
-// App initialization
+// App initialization (MUST be before any routes)
 const app = express();
 app.use(express.json());
 app.use(cors());
