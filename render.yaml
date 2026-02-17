@@ -6,3 +6,14 @@ services:
     buildCommand: npm install && npm run build
     branch: main
     repo: https://github.com/mohsinsultanriyad-crypto/black-white.git
+
+  - type: web
+    name: black-white-backend
+    env: node
+    buildCommand: cd api && npm install
+    startCommand: cd api && npm start
+    branch: main
+    repo: https://github.com/mohsinsultanriyad-crypto/black-white.git
+    envVars:
+      - key: MONGODB_DATA_API_KEY
+        sync: false
