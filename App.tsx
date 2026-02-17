@@ -6,7 +6,7 @@ import WorkerApp from './components/WorkerApp';
 import AdminApp from './components/AdminApp';
 import Login from './components/Login';
 import { Language } from './translations';
-import { db } from './db';
+import apiClient from './apiClient';
 import { Loader2, Cloud, CloudOff } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -14,111 +14,126 @@ const App: React.FC = () => {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [posts, setPosts] = useState<SitePost[]>([]);
-  const [workers, setWorkers] = useState<User[]>(MOCK_WORKERS);
+  const [workers, setWorkers] = useState<User[]>([]);
   const [advanceRequests, setAdvanceRequests] = useState<AdvanceRequest[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+    // Initial data load from backend
+    useEffect(() => {
+      async function fetchAllData() {
+        try {
+          const [shiftsRes, leavesRes, postsRes, workersRes, advanceRes, announceRes] = await Promise.all([
+            apiClient.get('/api/shifts'),
+            apiClient.get('/api/leaves'),
+            apiClient.get('/api/posts'),
+            apiClient.get('/api/workers'),
+            apiClient.get('/api/advanceRequests'),
+            apiClient.get('/api/announcements'),
+          ]);
+          setShifts(shiftsRes.data || []);
+          setLeaves(leavesRes.data || []);
+          setPosts(postsRes.data || []);
+          setWorkers(workersRes.data || []);
+          setAdvanceRequests(advanceRes.data || []);
+          setAnnouncements(announceRes.data || []);
+        } catch (err) {
+          // Optionally handle error
+        } finally {
+          setIsLoaded(true);
+        }
+      }
+      fetchAllData();
+    }, []);
   const [isSyncing, setIsSyncing] = useState(false);
   const [language, setLanguage] = useState<Language>('en');
 
-  // Load from backend on Init and set up polling for auto-refresh
+  // Rehydrate auth from localStorage on load
   useEffect(() => {
-    let isMounted = true;
-    let pollingInterval: NodeJS.Timeout | null = null;
-    let isFetching = false;
-
-    const fetchData = async () => {
-      if (isFetching) return;
-      isFetching = true;
-      try {
-        // Replace with your backend API endpoint if needed
-        const res = await fetch('/api/data');
-        if (!res.ok) throw new Error('Failed to fetch data');
-        const data = await res.json();
-        if (!isMounted) return;
-        // Only update state if data differs (shallow compare)
-        if (JSON.stringify(data.shifts) !== JSON.stringify(shifts)) setShifts(data.shifts || []);
-        if (JSON.stringify(data.leaves) !== JSON.stringify(leaves)) setLeaves(data.leaves || []);
-        if (JSON.stringify(data.posts) !== JSON.stringify(posts)) setPosts(data.posts || []);
-        if (JSON.stringify(data.workers) !== JSON.stringify(workers)) setWorkers(data.workers || []);
-        if (JSON.stringify(data.advanceRequests) !== JSON.stringify(advanceRequests)) setAdvanceRequests(data.advanceRequests || []);
-        if (JSON.stringify(data.announcements) !== JSON.stringify(announcements)) setAnnouncements(data.announcements || []);
-      } catch (e) {
-        console.error("Auto-refresh fetch failed", e);
-      } finally {
-        isFetching = false;
-        if (!isLoaded) setIsLoaded(true);
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    console.log("rehydrated token:", token ? "yes" : "no");
+    if (token && role && !currentUser) {
+      // Simulate user rehydration (replace with real user fetch if needed)
+      if (role === 'admin') setCurrentUser(MOCK_ADMIN);
+      else {
+        const worker = MOCK_WORKERS.find(w => token === 'worker-token-' + w.workerId);
+        if (worker) setCurrentUser(worker);
       }
-    };
-
-    // Initial load
-    fetchData();
-
-    if (currentUser) {
-      const intervalMs = currentUser.role === 'admin' ? 3000 : 5000;
-      pollingInterval = setInterval(fetchData, intervalMs);
     }
+  }, []);
 
-    return () => {
-      isMounted = false;
-      if (pollingInterval) clearInterval(pollingInterval);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
+  // Data loading and updates should use apiClient and real endpoints only. Removed all polling and /api/data calls.
 
   // Sync state changes to MongoDB
   // We use custom setters to trigger cloud sync only when data actually changes
+
   const updateShifts: React.Dispatch<React.SetStateAction<Shift[]>> = (val) => {
     setShifts(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
-      // Identify new/changed shifts and sync them
       setIsSyncing(true);
-      db.saveBatch('shifts', next).finally(() => setIsSyncing(false));
+      apiClient.post('/api/shifts/batch', next)
+        .catch(() => {/* handle error if needed */})
+        .finally(() => setIsSyncing(false));
       return next;
     });
   };
+
 
   const updateLeaves: React.Dispatch<React.SetStateAction<Leave[]>> = (val) => {
     setLeaves(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
       setIsSyncing(true);
-      db.saveBatch('leaves', next).finally(() => setIsSyncing(false));
+      apiClient.post('/api/leaves/batch', next)
+        .catch(() => {/* handle error if needed */})
+        .finally(() => setIsSyncing(false));
       return next;
     });
   };
+
 
   const updateWorkers: React.Dispatch<React.SetStateAction<User[]>> = (val) => {
     setWorkers(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
       setIsSyncing(true);
-      db.saveBatch('workers', next).finally(() => setIsSyncing(false));
+      apiClient.post('/api/workers/batch', next)
+        .catch(() => {/* handle error if needed */})
+        .finally(() => setIsSyncing(false));
       return next;
     });
   };
+
 
   const updatePosts: React.Dispatch<React.SetStateAction<SitePost[]>> = (val) => {
     setPosts(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
       setIsSyncing(true);
-      db.saveBatch('posts', next).finally(() => setIsSyncing(false));
+      apiClient.post('/api/posts/batch', next)
+        .catch(() => {/* handle error if needed */})
+        .finally(() => setIsSyncing(false));
       return next;
     });
   };
+
 
   const updateAdvanceRequests: React.Dispatch<React.SetStateAction<AdvanceRequest[]>> = (val) => {
     setAdvanceRequests(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
       setIsSyncing(true);
-      db.saveBatch('advanceRequests', next).finally(() => setIsSyncing(false));
+      apiClient.post('/api/advanceRequests/batch', next)
+        .catch(() => {/* handle error if needed */})
+        .finally(() => setIsSyncing(false));
       return next;
     });
   };
+
 
   const updateAnnouncements: React.Dispatch<React.SetStateAction<Announcement[]>> = (val) => {
     setAnnouncements(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
       setIsSyncing(true);
-      db.saveBatch('announcements', next).finally(() => setIsSyncing(false));
+      apiClient.post('/api/announcements/batch', next)
+        .catch(() => {/* handle error if needed */})
+        .finally(() => setIsSyncing(false));
       return next;
     });
   };

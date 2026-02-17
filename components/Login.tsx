@@ -16,17 +16,25 @@ const Login: React.FC<LoginProps> = ({ onLogin, workers }) => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    let token = '';
+    let role = '';
     if (isAdmin) {
-      // Check admin credentials from constants (User requested FSA101 / password123)
       if (userId === MOCK_ADMIN.email && password === (MOCK_ADMIN.password || 'password123')) {
+        token = 'admin-token';
+        role = 'admin';
+        localStorage.setItem('token', token);
+        localStorage.setItem('role', role);
         onLogin(MOCK_ADMIN);
       } else {
         setError('Invalid Admin credentials');
       }
     } else {
-      // Check worker credentials from state (including newly created ones)
       const worker = workers.find(w => w.workerId === userId);
       if (worker && password === (worker.password || 'password123')) {
+        token = 'worker-token-' + worker.workerId;
+        role = 'worker';
+        localStorage.setItem('token', token);
+        localStorage.setItem('role', role);
         onLogin(worker);
       } else {
         setError('Invalid Worker ID or Password');

@@ -1,5 +1,6 @@
 
 import React, { useState, useRef } from 'react';
+import apiClient from '../apiClient';
 import { User, SitePost } from '../types';
 import { Image as ImageIcon, Send, MoreHorizontal, Trash2, AlertCircle, Mic, Sparkles, Loader2 } from 'lucide-react';
 import { translations, Language } from '../translations';
@@ -20,7 +21,7 @@ const SiteFeed: React.FC<SiteFeedProps> = ({ user, posts, setPosts, language = '
   
   const t = translations[language];
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if (!content.trim()) return;
     const newPost: SitePost = {
       id: Math.random().toString(36).substr(2, 9),
@@ -30,8 +31,13 @@ const SiteFeed: React.FC<SiteFeedProps> = ({ user, posts, setPosts, language = '
       timestamp: Date.now(),
       imageUrl: Math.random() > 0.7 ? `https://picsum.photos/seed/${Math.random()}/600/400` : undefined
     };
-    setPosts([newPost, ...posts]);
-    setContent('');
+    try {
+      await apiClient.post('/api/posts', newPost);
+      setPosts([newPost, ...posts]);
+      setContent('');
+    } catch (err) {
+      // Optionally handle error
+    }
   };
 
   const startListening = () => {
@@ -81,8 +87,13 @@ const SiteFeed: React.FC<SiteFeedProps> = ({ user, posts, setPosts, language = '
     }
   };
 
-  const handleDeletePost = (postId: string) => {
-    setPosts(prev => prev.filter(p => p.id !== postId));
+  const handleDeletePost = async (postId: string) => {
+    try {
+      await apiClient.delete(`/api/posts/${postId}`);
+      setPosts(prev => prev.filter(p => p.id !== postId));
+    } catch (err) {
+      // Optionally handle error
+    }
     setPostToDelete(null);
   };
 
