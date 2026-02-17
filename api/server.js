@@ -10,6 +10,7 @@ app.use(express.json());
 
 // Manual CORS middleware for full preflight support
 app.use((req, res, next) => {
+  console.log('CORS middleware running for', req.method, req.url);
   res.header('Access-Control-Allow-Origin', 'https://frontend-f-lckm.onrender.com');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
