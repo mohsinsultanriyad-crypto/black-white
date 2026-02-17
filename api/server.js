@@ -13,6 +13,18 @@ app.use(cors({
 }));
 app.options('*', cors());
 
+// Production-grade error logging
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🔥 Unhandled Rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('🔥 Uncaught Exception:', err);
+});
+
+console.log('Server starting...');
+console.log('Frontend allowed origin:', process.env.FRONTEND_URL);
+console.log('Mongo API Key present:', !!process.env.MONGODB_DATA_API_KEY);
+
 // Config
 const API_KEY = process.env.MONGODB_DATA_API_KEY;
 const BASE_URL = 'https://data.mongodb-api.com/app/data-backend/endpoint/data/v1';
@@ -26,7 +38,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Simulated sync/restore endpoints (replace with real DB logic if needed)
-app.post('/api/sync', async (req, res) => {
+app.post('/api/sync', async (req, res, next) => {
   try {
     const { workers = [], shifts = [], leaves = [], advances = [], posts = [], announcements = [] } = req.body;
     console.log("SYNC counts", { workers: workers.length, shifts: shifts.length, leaves: leaves.length, advances: advances.length, posts: posts.length, announcements: announcements.length });
@@ -41,17 +53,12 @@ app.post('/api/sync', async (req, res) => {
     // Replace with real DB logic as needed
     res.json({ status: 'ok', inserted: true });
   } catch (err) {
-    res.status(500).json({
-      error: 'Sync failed',
-      message: err.message,
-      name: err.name,
-      code: err.code,
-      stack: err.stack,
-    });
+    console.error('Route Error:', err);
+    next(err);
   }
 });
 
-app.post('/api/restore', async (req, res) => {
+app.post('/api/restore', async (req, res, next) => {
   try {
     const { workers = [], shifts = [], leaves = [], advances = [], posts = [], announcements = [] } = req.body;
     console.log("RESTORE counts", { workers: workers.length, shifts: shifts.length, leaves: leaves.length, advances: advances.length, posts: posts.length, announcements: announcements.length });
@@ -66,18 +73,13 @@ app.post('/api/restore', async (req, res) => {
     // Replace with real DB logic as needed
     res.json({ status: 'ok', inserted: true });
   } catch (err) {
-    res.status(500).json({
-      error: 'Restore failed',
-      message: err.message,
-      name: err.name,
-      code: err.code,
-      stack: err.stack,
-    });
+    console.error('Route Error:', err);
+    next(err);
   }
 });
 
 // GET /api/data - aggregate all collections for frontend polling
-app.get('/api/data', async (req, res) => {
+app.get('/api/data', async (req, res, next) => {
   try {
     const collections = [
       'shifts',
@@ -113,12 +115,13 @@ app.get('/api/data', async (req, res) => {
       announcements: results[5],
     });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch all data', details: err.message });
+    console.error('Route Error:', err);
+    next(err);
   }
 });
 
 // POST /mongo/:action/:collection - generic proxy for Data API
-app.post('/mongo/:action/:collection', async (req, res) => {
+app.post('/mongo/:action/:collection', async (req, res, next) => {
   const { action, collection } = req.params;
   const body = req.body;
   try {
@@ -138,8 +141,19 @@ app.post('/mongo/:action/:collection', async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: 'MongoDB Data API request failed', details: err.message });
+    console.error('Route Error:', err);
+    next(err);
   }
+});
+
+// Global error handler (must be before app.listen)
+app.use((err, req, res, next) => {
+  console.error('🔥 Global Error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message,
+    stack: err.stack
+  });
 });
 
 // Start server
